@@ -1,6 +1,8 @@
 
 using ExpenseTracker.Backend.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,40 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// Supabase JWT authentication
+var supabaseUrl = builder.Configuration["Supabase:Url"];
+
+if (string.IsNullOrWhiteSpace(supabaseUrl))
+{
+    throw new InvalidOperationException(
+        "Supabase URL was not found in configuration.");
+}
+
+var issuer = $"{supabaseUrl.TrimEnd('/')}/auth/v1";
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = issuer;
+        options.Audience = "authenticated";
+
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = issuer,
+
+                ValidateAudience = true,
+                ValidAudience = "authenticated",
+
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true
+            };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -30,7 +66,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

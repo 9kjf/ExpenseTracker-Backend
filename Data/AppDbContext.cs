@@ -1,4 +1,5 @@
 ﻿
+using ExpenseTracker.Backend.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Backend.Data;
@@ -9,6 +10,8 @@ public class AppDbContext : DbContext
         : base(options)
     {
     }
+
+    public DbSet<Expense> Expenses { get; set; } = null!;
 
     public async Task<bool> CanConnectToDatabaseAsync()
     {
